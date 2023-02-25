@@ -75,6 +75,22 @@ public class RoomManager : MonoBehaviour
         }
     }
 
+    void AroundTransforms()
+    {
+        foreach (Room room in roomList)
+        {
+            room.position = new Vector2(
+                Mathf.Round(room.position.x),
+                Mathf.Round(room.position.y)
+                );
+
+            room.size = new Vector2(
+                Mathf.Round(room.size.x),
+                Mathf.Round(room.size.y)
+                );
+        }
+    }
+
     void GenerateNodes()
     {
         for (int id = 0; id < roomCount; id++)
@@ -140,6 +156,7 @@ public class RoomManager : MonoBehaviour
     {
         foreach (Room room in roomList)
         {
+            // Création des salles
             for (int x = room.GetMinX() ; x < room.GetMaxX(); x++)
             {
                 for (int y = room.GetMinY(); y < room.GetMaxY(); y++)
@@ -148,6 +165,7 @@ public class RoomManager : MonoBehaviour
                 }
             }
 
+            // Création des couloirs
             foreach(Room nextRoom in room.GetNextRooms())
             {
                 int minX = (int)Math.Min(room.position.x, nextRoom.position.x);
@@ -155,12 +173,12 @@ public class RoomManager : MonoBehaviour
                 int minY = (int)Math.Min(room.position.y, nextRoom.position.y);
                 int maxY = (int)Math.Max(room.position.y, nextRoom.position.y);
 
-                for (int x = minX; x < maxX; x++)
+                for (int x = minX; x <= maxX; x++)
                 {
                     InstanciateCell(new Vector2(x, room.position.y));
                 }
 
-                for (int y = minY; y < maxY; y++)
+                for (int y = minY; y <= maxY; y++)
                 {
                     InstanciateCell(new Vector2(room.position.x, y));
                 }
@@ -177,9 +195,63 @@ public class RoomManager : MonoBehaviour
         floor.transform.localScale = Vector3.one / 10;
     }
 
-    void AddFloors()
+    void InstanciateWall(Vector2 position, Vector2 direction)
     {
-        
+        GameObject wall = Instantiate(wallPrefab);
+        wall.transform.localScale = Vector3.one / 10;
+
+        Vector3 newPosition = new Vector3(position.x, 0, position.y);
+        Vector3 newRotation = new Vector3(0, 0, 0);
+
+        if (direction.x == 1.0 || direction.x == -1.0)
+        {
+            newRotation.y = 90;
+            newPosition.z += 1;
+        } 
+        if (direction.y == -1)
+        {
+            newPosition.z += 1;
+        }
+        if (direction.x == -1)
+        {
+            newPosition.x += 1;
+        }
+
+        Debug.Log(direction);
+        Debug.Log(newRotation);
+
+        wall.transform.position = newPosition;
+        wall.transform.Rotate(newRotation);
+    }
+
+    bool IsCellInPosition(Vector2 position)
+    {
+        // Retourne vrai si une cellule à une position dans la grille
+        return grid.Where((cell) => cell.position == position).Count() > 0;
+    }
+
+    void AddWalls()
+    {
+        // Une liste d'entier avec -1 et 1
+        List<int> directions = new List<int>() { -1, 0, 1 };
+        foreach (GridCell cell in grid)
+        {
+            foreach (int x in directions)
+            {
+                foreach (int y in directions)
+                {
+                    if (Math.Abs(x + y) == 1)
+                    {
+                        Vector2 checkPosition = cell.position + new Vector2(x, y);
+                        if (!IsCellInPosition(checkPosition))
+                        {
+                            InstanciateWall(checkPosition, new Vector2(x, y));
+                        }
+                    }
+
+                }
+            }
+        }
     }
 
     void GenerateGraph()
@@ -190,9 +262,10 @@ public class RoomManager : MonoBehaviour
         {
             AdjustPosition();
         }
+        AroundTransforms();
         SizeGeneration();
         GenerateGrid();
-        AddFloors();
+        AddWalls();
 
         // Edges generation
         /*       foreach (Room room in roomList)
